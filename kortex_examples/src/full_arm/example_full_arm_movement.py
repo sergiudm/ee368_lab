@@ -27,9 +27,9 @@ class ExampleFullArmMovement:
             self.HOME_ACTION_IDENTIFIER = 2
 
             # Get node params
-            self.robot_name = rospy.get_param('~robot_name', "my_gen3")
-            self.degrees_of_freedom = rospy.get_param("/" + self.robot_name + "/degrees_of_freedom", 7)
-            self.is_gripper_present = rospy.get_param("/" + self.robot_name + "/is_gripper_present", False)
+            self.robot_name = rospy.get_param('~robot_name', "my_gen3_lite")
+            self.degrees_of_freedom = rospy.get_param("/" + self.robot_name + "/degrees_of_freedom", 6)
+            self.is_gripper_present = rospy.get_param("/" + self.robot_name + "/is_gripper_present", True)
 
             rospy.loginfo("Using robot_name " + self.robot_name + " , robot has " + str(self.degrees_of_freedom) + " degrees of freedom and is_gripper_present is " + str(self.is_gripper_present))
 
@@ -39,8 +39,10 @@ class ExampleFullArmMovement:
 
             # Init the services
             clear_faults_full_name = '/' + self.robot_name + '/base/clear_faults'
+            print(clear_faults_full_name)
             rospy.wait_for_service(clear_faults_full_name)
             self.clear_faults = rospy.ServiceProxy(clear_faults_full_name, Base_ClearFaults)
+            print(456)
 
             read_action_full_name = '/' + self.robot_name + '/base/read_action'
             rospy.wait_for_service(read_action_full_name)
@@ -173,12 +175,12 @@ class ExampleFullArmMovement:
         rospy.sleep(0.25)
         return True
 
-    def example_send_cartesian_pose(self):
+    def example_send_cartesian_pose(self, x=0.7, y=0.0, z=0.2, theta_x=90, theta_y=0, theta_z=90):
         self.last_action_notif_type = None
         # Get the actual cartesian pose to increment it
         # You can create a subscriber to listen to the base_feedback
         # Here we only need the latest message in the topic though
-        feedback = rospy.wait_for_message("/" + self.robot_name + "/base_feedback", BaseCyclic_Feedback)
+        # feedback = rospy.wait_for_message("/" + self.robot_name + "/base_feedback", BaseCyclic_Feedback)
 
         # Possible to execute waypointList via execute_action service or use execute_waypoint_trajectory service directly
         req = ExecuteActionRequest()
@@ -186,13 +188,7 @@ class ExampleFullArmMovement:
 
         trajectory.waypoints.append(
             self.FillCartesianWaypoint(
-                feedback.base.commanded_tool_pose_x,
-                feedback.base.commanded_tool_pose_y,
-                feedback.base.commanded_tool_pose_z + 0.10,
-                feedback.base.commanded_tool_pose_theta_x,
-                feedback.base.commanded_tool_pose_theta_y,
-                feedback.base.commanded_tool_pose_theta_z,
-                0)
+                x, y, z, theta_x, theta_y, theta_z, 0.1)
         )
 
         trajectory.duration = 0
@@ -304,8 +300,8 @@ class ExampleFullArmMovement:
         config = self.get_product_configuration()
 
         if config.output.model == ModelId.MODEL_ID_L31:
-        
-            trajectory.waypoints.append(self.FillCartesianWaypoint(0.439,  0.194,  0.448, 90.6, -1.0, 150, 0))
+            print("L31 detected")
+            trajectory.waypoints.append(self.FillCartesianWaypoint(0.439,  0.194,  0.448, 90.6, -1.0, 150, 0.1))
             trajectory.waypoints.append(self.FillCartesianWaypoint(0.200,  0.150,  0.400, 90.6, -1.0, 150, 0))
             trajectory.waypoints.append(self.FillCartesianWaypoint(0.350,  0.050,  0.300, 90.6, -1.0, 150, 0))
         else:
@@ -350,16 +346,16 @@ class ExampleFullArmMovement:
 
             #*******************************************************************************
             # Move the robot to the Home position with an Action
-            success &= self.example_home_the_robot()
+            #success &= self.example_home_the_robot()
             #*******************************************************************************
 
             #*******************************************************************************
             # Example of gripper command
             # Let's fully open the gripper
-            if self.is_gripper_present:
-                success &= self.example_send_gripper_command(0.0)
-            else:
-                rospy.logwarn("No gripper is present on the arm.")  
+            # if self.is_gripper_present:
+            #     success &= self.example_send_gripper_command(0.0)
+            # else:
+            #     rospy.logwarn("No gripper is present on the arm.")  
             #*******************************************************************************
 
             #*******************************************************************************
@@ -368,44 +364,174 @@ class ExampleFullArmMovement:
 
             # Example of cartesian pose
             # Let's make it move in Z
-            success &= self.example_send_cartesian_pose()
+            # success &= self.example_send_cartesian_pose()
             #*******************************************************************************
 
             #*******************************************************************************
             # Example of angular position
             # Let's send the arm to vertical position
-            success &= self.example_send_joint_angles()
+            #success &= self.example_send_joint_angles()
             #*******************************************************************************
 
             #*******************************************************************************
             # Example of gripper command
             # Let's close the gripper at 50%
-            if self.is_gripper_present:
-                success &= self.example_send_gripper_command(0.5)
-            else:
-                rospy.logwarn("No gripper is present on the arm.")    
+            # if self.is_gripper_present:
+            #     success &= self.example_send_gripper_command(0.9)
+            # else:
+            #     rospy.logwarn("No gripper is present on the arm.")    
             #*******************************************************************************
         
             #*******************************************************************************
             # Move the robot to the Home position with an Action
-            success &= self.example_home_the_robot()
+            #success &= self.example_home_the_robot()
             #*******************************************************************************
 
             #*******************************************************************************
             # Example of waypoint
             # Let's move the arm
-            success &= self.example_cartesian_waypoint_action()
-
+            # success &= self.example_cartesian_waypoint_action()
+            #success &= self.example_send_cartesian_pose()
+            success &= self.example_pick_and_place()
             #*******************************************************************************
             # Move the robot to the Home position with an Action
-            success &= self.example_home_the_robot()
+            # success &= self.example_home_the_robot()
             #*******************************************************************************
 
         # For testing purposes
-        rospy.set_param("/kortex_examples_test_results/full_arm_movement_python", success)
+        #rospy.set_param("/kortex_examples_test_results/full_arm_movement_python", success)
 
         if not success:
             rospy.logerr("The example encountered an error.")
+        
+    def example_pick_and_place(self, position1_x=0.4, position1_y=0.0, position1_z=0.3, 
+                              position2_x=0.4, position2_y=0.3, position2_z=0.3):
+        rospy.loginfo("Starting pick and place sequence...")
+        success = True
+        success &= self.example_home_the_robot()
+        
+        # First set the reference frame
+        success &= self.example_set_cartesian_reference_frame()
+        
+        # Move slightly above position1 first
+        self.last_action_notif_type = None
+        req = ExecuteActionRequest()
+        trajectory = WaypointList()
+        trajectory.waypoints.append(self.FillCartesianWaypoint(
+            position1_x, position1_y, position1_z + 0.1, 90, 0, 0, 0))
+        req.input.oneof_action_parameters.execute_waypoint_list.append(trajectory)
+        
+        try:
+            self.execute_action(req)
+            success &= self.wait_for_action_end_or_abort()
+            rospy.loginfo("Moved slightly above position1")
+        except rospy.ServiceException:
+            rospy.logerr("Failed to move above position1")
+            return False
+        
+        # Move to position1
+        self.last_action_notif_type = None
+        req = ExecuteActionRequest()
+        trajectory = WaypointList()
+        trajectory.waypoints.append(self.FillCartesianWaypoint(
+            position1_x, position1_y, position1_z, 90, 0, 90, 0))
+        req.input.oneof_action_parameters.execute_waypoint_list.append(trajectory)
+        
+        try:
+            self.execute_action(req)
+            success &= self.wait_for_action_end_or_abort()
+            rospy.loginfo("Moved to position1")
+        except rospy.ServiceException:
+            rospy.logerr("Failed to move to position1")
+            return False
+        
+        # Close the gripper to grip object
+        if self.is_gripper_present:
+            success &= self.example_send_gripper_command(0.8)  # Adjust grip strength as needed
+        else:
+            rospy.logwarn("No gripper is present on the arm.")
+            return False
+        
+        # Move up from position1
+        self.last_action_notif_type = None
+        req = ExecuteActionRequest()
+        trajectory = WaypointList()
+        trajectory.waypoints.append(self.FillCartesianWaypoint(
+            position1_x, position1_y, position1_z + 0.1, 90, 0, 90, 0))
+        req.input.oneof_action_parameters.execute_waypoint_list.append(trajectory)
+        
+        try:
+            self.execute_action(req)
+            success &= self.wait_for_action_end_or_abort()
+            rospy.loginfo("Moved up from position1")
+        except rospy.ServiceException:
+            rospy.logerr("Failed to move up from position1")
+            return False
+        
+        # Move above position2
+        self.last_action_notif_type = None
+        req = ExecuteActionRequest()
+        trajectory = WaypointList()
+        trajectory.waypoints.append(self.FillCartesianWaypoint(
+            position2_x, position2_y, position2_z + 0.1, 30, 0, 90, 0))
+        req.input.oneof_action_parameters.execute_waypoint_list.append(trajectory)
+        
+        try:
+            self.execute_action(req)
+            success &= self.wait_for_action_end_or_abort()
+            rospy.loginfo("Moved above position2")
+        except rospy.ServiceException:
+            rospy.logerr("Failed to move above position2")
+            return False
+        
+        # Move to position2 to place object
+        self.last_action_notif_type = None
+        req = ExecuteActionRequest()
+        trajectory = WaypointList()
+        trajectory.waypoints.append(self.FillCartesianWaypoint(
+            position2_x, position2_y, position2_z, 30, 0, 90, 0))
+        req.input.oneof_action_parameters.execute_waypoint_list.append(trajectory)
+        
+        try:
+            self.execute_action(req)
+            success &= self.wait_for_action_end_or_abort()
+            rospy.loginfo("Moved to position2")
+        except rospy.ServiceException:
+            rospy.logerr("Failed to move to position2")
+            return False
+        
+        # Open the gripper to release object
+        if self.is_gripper_present:
+            success &= self.example_send_gripper_command(0.0)
+            rospy.loginfo("Opened the gripper to release object")
+        else:
+            rospy.logwarn("No gripper is present on the arm.")
+        
+        # Move up from position2
+        self.last_action_notif_type = None
+        req = ExecuteActionRequest()
+        trajectory = WaypointList()
+        trajectory.waypoints.append(self.FillCartesianWaypoint(
+            position2_x, position2_y, position2_z + 0.1, 50, 30, 90, 0))
+        req.input.oneof_action_parameters.execute_waypoint_list.append(trajectory)
+        
+        try:
+            self.execute_action(req)
+            success &= self.wait_for_action_end_or_abort()
+            rospy.loginfo("Moved up from position2")
+        except rospy.ServiceException:
+            rospy.logerr("Failed to move up from position2")
+            return False
+        
+        # Return to home position
+        success &= self.example_home_the_robot()
+        
+        if success:
+            rospy.loginfo("Pick and place sequence completed successfully")
+        else:
+            rospy.logerr("Pick and place sequence failed")
+        
+        return success
 
 
 if __name__ == "__main__":

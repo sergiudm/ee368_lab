@@ -48,7 +48,31 @@
         <joint name="$(arg prefix)joint_1" value="0" />
         <joint name="$(arg prefix)joint_2" value="0" />
         <joint name="$(arg prefix)joint_3" value="0" />
-        <joint name="$(arg prefix)joint_4" value="0" />
+        <joint name="$(arg prefix)joint_4" value="3" />
+        <joint name="$(arg prefix)joint_5" value="0" />
+        <joint name="$(arg prefix)joint_6" value="0" />
+    </group_state>
+    <group_state name="pos_src" group="arm">
+        <joint name="$(arg prefix)joint_1" value="0.1181" />
+        <joint name="$(arg prefix)joint_2" value="-0.8122" />
+        <joint name="$(arg prefix)joint_3" value="1.733" />
+        <joint name="$(arg prefix)joint_4" value="-1.4217" />
+        <joint name="$(arg prefix)joint_5" value="-0.5366" />
+        <joint name="$(arg prefix)joint_6" value="-0.7053" />
+    </group_state>
+    <group_state name="pos_up" group="arm">
+        <joint name="$(arg prefix)joint_1" value="-0.1347" />
+        <joint name="$(arg prefix)joint_2" value="-0.14" />
+        <joint name="$(arg prefix)joint_3" value="2.2452" />
+        <joint name="$(arg prefix)joint_4" value="-1.448" />
+        <joint name="$(arg prefix)joint_5" value="-0.7679" />
+        <joint name="$(arg prefix)joint_6" value="-0.925" />
+    </group_state>
+    <group_state name="pos_tgt" group="arm">
+        <joint name="$(arg prefix)joint_1" value="0" />
+        <joint name="$(arg prefix)joint_2" value="0" />
+        <joint name="$(arg prefix)joint_3" value="0" />
+        <joint name="$(arg prefix)joint_4" value="6" />
         <joint name="$(arg prefix)joint_5" value="0" />
         <joint name="$(arg prefix)joint_6" value="0" />
     </group_state>

@@ -1,8 +1,8 @@
 <launch>
 
     <!-- Robot namespace -->
-    <arg name="robot_name" default="my_gen3"/>
-    <arg name="start_delay_seconds" default="0"/>
+    <arg name="robot_name" default="my_gen3_light"/>
+    <arg name="start_delay_seconds" default="3"/>
 
     <!-- Launch the example in that namespace -->
     <node name="waypoint_action_client_python" pkg="kortex_examples" type="example_waypoint_action_client.py" output="screen" launch-prefix="bash -c 'sleep $(arg start_delay_seconds); $0 $@' ">
