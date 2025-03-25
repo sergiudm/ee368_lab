@@ -3,6 +3,9 @@
     <!-- Robot namespace -->
     <arg name="robot_name" default="my_gen3_lite" />
     <arg name="start_delay_seconds" default="0" />
+    <!-- <arg name="src_pose" default="[0.5, 0.5 ,0.5 ,0 ,0, 0]" /> -->
+    <!-- <arg name="goal_pose" default="[0.5, 0.5, 0.6, 0, 0, 0]" /> -->
+    <rosparam command="load" file="$(find kortex_examples)/config/coordinates.yaml" />
 
     <!-- Launch the example in that namespace -->
     <node name="grasp_and_grip" pkg="kortex_examples" type="grasp_and_grip"

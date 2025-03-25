@@ -415,7 +415,7 @@ int main(int argc, char **argv) {
   ros::init(argc, argv, "grasp_and_grip_cpp");
 
   // For testing purpose
-  ros::param::del("/kortex_examples_test_results/full_arm_movement_cpp");
+  //ros::param::del("/kortex_examples_test_results/full_arm_movement_cpp");
 
   bool success = true;
 
@@ -428,9 +428,6 @@ int main(int argc, char **argv) {
   int degrees_of_freedom = 6;
 
   bool is_gripper_present = true;
-
-  std::vector<float> src_pose = {0.5, 0.0, 0.5, 0.0, 0.0, 0.0};
-  std::vector<float> goal_pose = {0.5, 0.0, 0.3, 0.0, 0.0, 0.0};
 
   // Parameter robot_name
   if (!ros::param::get("~robot_name", robot_name)) {
@@ -471,6 +468,17 @@ int main(int argc, char **argv) {
     std::string error_string =
         "Using is_gripper_present " + std::to_string(is_gripper_present);
     ROS_INFO("%s", error_string.c_str());
+  }
+
+  std::vector<float> src_pose;
+  std::vector<float> goal_pose;
+  if(!ros::param::get("/coords/src_pose", src_pose)){
+    ROS_ERROR("Failed to get src_pose");
+    return -1;
+  }
+  if(!ros::param::get("/coords/goal_pose", goal_pose)){
+    ROS_ERROR("Failed to get goal_pose");
+    return -1;
   }
   //*******************************************************************************
 
