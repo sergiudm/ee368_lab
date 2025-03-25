@@ -399,11 +399,11 @@ int main(int argc, char **argv) {
   // ROS Parameters
   ros::NodeHandle n;
 
-  std::string robot_name = "my_gen3";
+  std::string robot_name = "my_gen3_lite";
 
-  int degrees_of_freedom = 7;
+  int degrees_of_freedom = 6;
 
-  bool is_gripper_present = false;
+  bool is_gripper_present = true;
 
   // Parameter robot_name
   if (!ros::param::get("~robot_name", robot_name)) {
@@ -469,48 +469,19 @@ int main(int argc, char **argv) {
   // Make sure to clear the robot's faults else it won't move if it's already in
   // fault
   success &= example_clear_faults(n, robot_name);
-  //*******************************************************************************
 
   //*******************************************************************************
   // Move the robot to the Home position with an Action
   success &= example_home_the_robot(n, robot_name);
-  //*******************************************************************************
-
-  //*******************************************************************************
-  // Example of gripper command
-  // Let's close the gripper
-  if (is_gripper_present) {
-    success &= example_send_gripper_command(n, robot_name, 0.0);
-  }
-  //*******************************************************************************
 
   //*******************************************************************************
   // Set the reference frame to "Mixed"
   success &= example_set_cartesian_reference_frame(n, robot_name);
 
-  // Example of cartesian pose
-  // Let's make it move in Z
-  success &= example_send_cartesian_pose(n, robot_name);
-  //*******************************************************************************
-
   //*******************************************************************************
   // Example of angular position
   // Let's send the arm to vertical position
   success &= example_send_joint_angles(n, robot_name, degrees_of_freedom);
-  //*******************************************************************************
-
-  //*******************************************************************************
-  // Example of gripper command
-  // Let's close the gripper
-  if (is_gripper_present) {
-    success &= example_send_gripper_command(n, robot_name, 0.5);
-  }
-  //*******************************************************************************
-
-  //*******************************************************************************
-  // Move the robot to the Home position again with an Action
-  success &= example_home_the_robot(n, robot_name);
-  //*******************************************************************************
 
   //*******************************************************************************
   // Move the robot using Cartesian waypoint.
