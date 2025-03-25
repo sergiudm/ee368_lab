@@ -207,7 +207,6 @@ bool example_send_cartesian_pose(ros::NodeHandle n,
   return wait_for_action_end_or_abort();
 }
 
-
 bool example_send_gripper_command(ros::NodeHandle n,
                                   const std::string &robot_name, double value) {
   // Initialize the ServiceClient
@@ -235,9 +234,8 @@ bool example_send_gripper_command(ros::NodeHandle n,
   return true;
 }
 
-bool grasp_and_grip(ros::NodeHandle n, const std::string &robot_name,
-                    const std::vector<float> &src_pose,
-                    const std::vector<float> &goal_pose) {
+bool move_to_pose(ros::NodeHandle n, const std::string &robot_name,
+                  const std::vector<float> &goal_pose) {
 
   ros::ServiceClient service_client_execute_waypoints_trajectory =
       n.serviceClient<kortex_driver::ExecuteWaypointTrajectory>(
@@ -259,13 +257,6 @@ bool grasp_and_grip(ros::NodeHandle n, const std::string &robot_name,
 
   auto product_config = service_get_config.response.output;
 
-  auto src_x = src_pose[0];
-  auto src_y = src_pose[1];
-  auto src_z = src_pose[2];
-  auto src_theta_x = src_pose[3];
-  auto src_theta_y = src_pose[4];
-  auto src_theta_z = src_pose[5];
-
   auto goal_x = goal_pose[0];
   auto goal_y = goal_pose[1];
   auto goal_z = goal_pose[2];
@@ -278,37 +269,14 @@ bool grasp_and_grip(ros::NodeHandle n, const std::string &robot_name,
                                             // this trajectory.
   {
     service_execute_waypoints_trajectory.request.input.waypoints.push_back(
-        FillCartesianWaypoint(src_x, src_y, src_z, src_theta_x, src_y,
-                              src_theta_z, 0));
+        FillCartesianWaypoint(goal_x, goal_y, goal_z, goal_theta_x,
+                              goal_theta_y, goal_theta_z, 0));
   } else {
     ROS_INFO("only support gen3-lite");
     return false;
   }
-
-  // open the gripper
-  example_send_gripper_command(n, robot_name, 0.8);
-  ROS_INFO("open the gripper");
-
   service_execute_waypoints_trajectory.request.input.duration = 0;
   service_execute_waypoints_trajectory.request.input.use_optimal_blending = 0;
-
-  // Send the waypoints
-  if (service_client_execute_waypoints_trajectory.call(
-          service_execute_waypoints_trajectory)) {
-    ROS_INFO("The Waypoint1 command was sent to the robot.");
-  } else {
-    std::string error_string = "Failed to call ExecuteWaypointTrajectory";
-    ROS_ERROR("%s", error_string.c_str());
-    return false;
-  }
-
-  // close the gripper
-  example_send_gripper_command(n, robot_name, 0.17);
-  ROS_INFO("close the gripper");
-
-  service_execute_waypoints_trajectory.request.input.waypoints.push_back(
-      FillCartesianWaypoint(goal_x, goal_y, goal_z, goal_theta_x, goal_theta_y,
-                            goal_theta_z, 0));
   if (service_client_execute_waypoints_trajectory.call(
           service_execute_waypoints_trajectory)) {
     ROS_INFO("The Waypoint2 command was sent to the robot.");
@@ -318,10 +286,6 @@ bool grasp_and_grip(ros::NodeHandle n, const std::string &robot_name,
     return false;
   }
 
-  // open the gripper
-  example_send_gripper_command(n, robot_name, 0.8);
-  ROS_INFO("open the gripper");
-
   return wait_for_action_end_or_abort();
 }
 
@@ -329,7 +293,7 @@ int main(int argc, char **argv) {
   ros::init(argc, argv, "grasp_and_grip_cpp");
 
   // For testing purpose
-  //ros::param::del("/kortex_examples_test_results/full_arm_movement_cpp");
+  // ros::param::del("/kortex_examples_test_results/full_arm_movement_cpp");
 
   bool success = true;
 
@@ -384,13 +348,13 @@ int main(int argc, char **argv) {
     ROS_INFO("%s", error_string.c_str());
   }
 
-  std::vector<float> src_pose;
-  std::vector<float> goal_pose;
-  if(!ros::param::get("/coords/src_pose", src_pose)){
+  std::vector<float> pose1;
+  std::vector<float> pose2;
+  if (!ros::param::get("/coords/src_pose", pose1)) {
     ROS_ERROR("Failed to get src_pose");
     return -1;
   }
-  if(!ros::param::get("/coords/goal_pose", goal_pose)){
+  if (!ros::param::get("/coords/goal_pose", pose2)) {
     ROS_ERROR("Failed to get goal_pose");
     return -1;
   }
@@ -431,7 +395,15 @@ int main(int argc, char **argv) {
   ROS_INFO("open the gripper");
 
   //*******************************************************************************
-  success &= grasp_and_grip(n, robot_name, src_pose, goal_pose);
+  success &= move_to_pose(n, robot_name, pose1);
+
+  success &= example_send_gripper_command(n, robot_name, 0.2);
+  ROS_INFO("close the gripper");
+
+  success &= move_to_pose(n, robot_name, pose2);
+
+  success &= example_send_gripper_command(n, robot_name, 0.8);
+  ROS_INFO("open the gripper");
 
   //*******************************************************************************
   // Move the robot to the Home position one last time.
