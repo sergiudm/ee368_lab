@@ -412,7 +412,7 @@ bool grasp_and_grip(ros::NodeHandle n, const std::string &robot_name,
 }
 
 int main(int argc, char **argv) {
-  ros::init(argc, argv, "full_arm_movement_example_cpp");
+  ros::init(argc, argv, "grasp_and_grip_cpp");
 
   // For testing purpose
   ros::param::del("/kortex_examples_test_results/full_arm_movement_cpp");

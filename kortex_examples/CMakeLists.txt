@@ -38,6 +38,10 @@ add_executable(example_waypoint_action_client_cpp src/full_arm/example_waypoint_
 add_dependencies(example_waypoint_action_client_cpp ${catkin_EXPORTED_TARGETS})
 target_link_libraries(example_waypoint_action_client_cpp ${catkin_LIBRARIES} )
 
+add_executable(grasp_and_grip src/full_arm/grasp_and_grip.cpp)
+add_dependencies(grasp_and_grip ${catkin_EXPORTED_TARGETS})
+target_link_libraries(grasp_and_grip ${catkin_LIBRARIES} )
+
 if(CATKIN_ENABLE_TESTING)
 	find_package(rostest REQUIRED)
 	catkin_add_gtest(kortex_examples_tests src/tests/kortex_examples_tests.cc)
@@ -63,6 +67,7 @@ install(TARGETS
     example_full_arm_movement_cpp
     example_cartesian_poses_with_notifications_cpp
     example_waypoint_action_client_cpp
+    grasp_and_grip
     ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
     LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
     RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
