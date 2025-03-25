@@ -427,6 +427,9 @@ int main(int argc, char **argv) {
   // Set the reference frame to "Mixed"
   success &= example_set_cartesian_reference_frame(n, robot_name);
 
+  success &= example_send_gripper_command(n, robot_name, 0.8);
+  ROS_INFO("open the gripper");
+
   //*******************************************************************************
   success &= grasp_and_grip(n, robot_name, src_pose, goal_pose);
 
