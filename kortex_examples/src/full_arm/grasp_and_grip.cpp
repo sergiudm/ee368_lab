@@ -207,95 +207,6 @@ bool example_send_cartesian_pose(ros::NodeHandle n,
   return wait_for_action_end_or_abort();
 }
 
-bool example_send_joint_angles(ros::NodeHandle n, const std::string &robot_name,
-                               int degrees_of_freedom) {
-  last_action_notification_event = 0;
-  // Initialize the ServiceClient
-  ros::ServiceClient service_client_execute_waypoints_trajectory =
-      n.serviceClient<kortex_driver::ExecuteWaypointTrajectory>(
-          "/" + robot_name + "/base/execute_waypoint_trajectory");
-  kortex_driver::ExecuteWaypointTrajectory service_execute_waypoints_trajectory;
-
-  ros::ServiceClient service_client_validate_waypoint_list =
-      n.serviceClient<kortex_driver::ValidateWaypointList>(
-          "/" + robot_name + "/base/validate_waypoint_list");
-  kortex_driver::ValidateWaypointList service_validate_waypoint_list;
-
-  kortex_driver::WaypointList trajectory;
-  kortex_driver::Waypoint waypoint;
-  kortex_driver::AngularWaypoint angularWaypoint;
-
-  // Angles to send the arm to vertical position (all zeros)
-  for (unsigned int i = 0; i < degrees_of_freedom; i++) {
-    angularWaypoint.angles.push_back(0.0);
-  }
-
-  // Each AngularWaypoint needs a duration and the global duration (from
-  // WaypointList) is disregarded. If you put something too small (for either
-  // global duration or AngularWaypoint duration), the trajectory will be
-  // rejected.
-  int angular_duration = 0;
-  angularWaypoint.duration = angular_duration;
-
-  // Initialize Waypoint and WaypointList
-  waypoint.oneof_type_of_waypoint.angular_waypoint.push_back(angularWaypoint);
-  trajectory.duration = 0;
-  trajectory.use_optimal_blending = false;
-  trajectory.waypoints.push_back(waypoint);
-
-  service_validate_waypoint_list.request.input = trajectory;
-  if (!service_client_validate_waypoint_list.call(
-          service_validate_waypoint_list)) {
-    std::string error_string = "Failed to call ValidateWaypointList";
-    ROS_ERROR("%s", error_string.c_str());
-    return false;
-  }
-
-  int error_number =
-      service_validate_waypoint_list.response.output.trajectory_error_report
-          .trajectory_error_elements.size();
-  static const int MAX_ANGULAR_DURATION = 30;
-
-  while (error_number >= 1 && angular_duration < MAX_ANGULAR_DURATION) {
-    angular_duration++;
-    trajectory.waypoints[0]
-        .oneof_type_of_waypoint.angular_waypoint[0]
-        .duration = angular_duration;
-
-    service_validate_waypoint_list.request.input = trajectory;
-    if (!service_client_validate_waypoint_list.call(
-            service_validate_waypoint_list)) {
-      std::string error_string = "Failed to call ValidateWaypointList";
-      ROS_ERROR("%s", error_string.c_str());
-      return false;
-    }
-    error_number =
-        service_validate_waypoint_list.response.output.trajectory_error_report
-            .trajectory_error_elements.size();
-  }
-
-  if (angular_duration >= MAX_ANGULAR_DURATION) {
-    // It should be possible to reach position within 30s
-    // WaypointList is invalid (other error than angularWaypoint duration)
-    std::string error_string = "WaypointList is invalid";
-    ROS_ERROR("%s", error_string.c_str());
-    return false;
-  }
-
-  service_execute_waypoints_trajectory.request.input = trajectory;
-
-  // Send the angles
-  if (service_client_execute_waypoints_trajectory.call(
-          service_execute_waypoints_trajectory)) {
-    ROS_INFO("The joint angles were sent to the robot.");
-  } else {
-    std::string error_string = "Failed to call ExecuteWaypointTrajectory";
-    ROS_ERROR("%s", error_string.c_str());
-    return false;
-  }
-
-  return wait_for_action_end_or_abort();
-}
 
 bool example_send_gripper_command(ros::NodeHandle n,
                                   const std::string &robot_name, double value) {
@@ -376,6 +287,7 @@ bool grasp_and_grip(ros::NodeHandle n, const std::string &robot_name,
 
   // open the gripper
   example_send_gripper_command(n, robot_name, 0.8);
+  ROS_INFO("open the gripper");
 
   service_execute_waypoints_trajectory.request.input.duration = 0;
   service_execute_waypoints_trajectory.request.input.use_optimal_blending = 0;
@@ -383,7 +295,7 @@ bool grasp_and_grip(ros::NodeHandle n, const std::string &robot_name,
   // Send the waypoints
   if (service_client_execute_waypoints_trajectory.call(
           service_execute_waypoints_trajectory)) {
-    ROS_INFO("The WaypointList command was sent to the robot.");
+    ROS_INFO("The Waypoint1 command was sent to the robot.");
   } else {
     std::string error_string = "Failed to call ExecuteWaypointTrajectory";
     ROS_ERROR("%s", error_string.c_str());
@@ -392,13 +304,14 @@ bool grasp_and_grip(ros::NodeHandle n, const std::string &robot_name,
 
   // close the gripper
   example_send_gripper_command(n, robot_name, 0.17);
+  ROS_INFO("close the gripper");
 
   service_execute_waypoints_trajectory.request.input.waypoints.push_back(
       FillCartesianWaypoint(goal_x, goal_y, goal_z, goal_theta_x, goal_theta_y,
                             goal_theta_z, 0));
   if (service_client_execute_waypoints_trajectory.call(
           service_execute_waypoints_trajectory)) {
-    ROS_INFO("The WaypointList command was sent to the robot.");
+    ROS_INFO("The Waypoint2 command was sent to the robot.");
   } else {
     std::string error_string = "Failed to call ExecuteWaypointTrajectory";
     ROS_ERROR("%s", error_string.c_str());
@@ -406,7 +319,8 @@ bool grasp_and_grip(ros::NodeHandle n, const std::string &robot_name,
   }
 
   // open the gripper
-    example_send_gripper_command(n, robot_name, 0.8);
+  example_send_gripper_command(n, robot_name, 0.8);
+  ROS_INFO("open the gripper");
 
   return wait_for_action_end_or_abort();
 }
@@ -514,17 +428,13 @@ int main(int argc, char **argv) {
   success &= example_set_cartesian_reference_frame(n, robot_name);
 
   //*******************************************************************************
-  // Move the robot using Cartesian waypoint.
   success &= grasp_and_grip(n, robot_name, src_pose, goal_pose);
 
   //*******************************************************************************
   // Move the robot to the Home position one last time.
   success &= example_home_the_robot(n, robot_name);
   //*******************************************************************************
-
-  // Report success for testing purposes
-  ros::param::set("/kortex_examples_test_results/full_arm_movement_cpp",
-                  success);
+  ROS_INFO("Grasp and grip finished with %s", success ? "success" : "failure");
 
   return success ? 0 : 1;
 }
