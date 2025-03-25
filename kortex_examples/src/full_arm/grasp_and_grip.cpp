@@ -12,6 +12,7 @@
 #include <atomic>
 #include <thread>
 
+#include "ros/console.h"
 #include "ros/ros.h"
 
 #include <kortex_driver/ActionEvent.h>
@@ -30,6 +31,7 @@
 #include <kortex_driver/SendGripperCommand.h>
 #include <kortex_driver/SetCartesianReferenceFrame.h>
 #include <kortex_driver/ValidateWaypointList.h>
+#include <vector>
 
 #define HOME_ACTION_IDENTIFIER 2
 
@@ -322,8 +324,9 @@ bool example_send_gripper_command(ros::NodeHandle n,
   return true;
 }
 
-bool example_cartesian_waypoint(ros::NodeHandle n,
-                                const std::string &robot_name) {
+bool grasp_and_grip(ros::NodeHandle n, const std::string &robot_name,
+                    const std::vector<float> &src_pose,
+                    const std::vector<float> &goal_pose) {
 
   ros::ServiceClient service_client_execute_waypoints_trajectory =
       n.serviceClient<kortex_driver::ExecuteWaypointTrajectory>(
@@ -345,36 +348,39 @@ bool example_cartesian_waypoint(ros::NodeHandle n,
 
   auto product_config = service_get_config.response.output;
 
+  auto src_x = src_pose[0];
+  auto src_y = src_pose[1];
+  auto src_z = src_pose[2];
+  auto src_theta_x = src_pose[3];
+  auto src_theta_y = src_pose[4];
+  auto src_theta_z = src_pose[5];
+
+  auto goal_x = goal_pose[0];
+  auto goal_y = goal_pose[1];
+  auto goal_z = goal_pose[2];
+  auto goal_theta_x = goal_pose[3];
+  auto goal_theta_y = goal_pose[4];
+  auto goal_theta_z = goal_pose[5];
+
   if (product_config.model ==
       kortex_driver::ModelId::MODEL_ID_L31) // If the robot is a GEN3-LITE use
                                             // this trajectory.
   {
     service_execute_waypoints_trajectory.request.input.waypoints.push_back(
-        FillCartesianWaypoint(0.439, 0.194, 0.448, 90.6, -1.0, 150, 0));
-    service_execute_waypoints_trajectory.request.input.waypoints.push_back(
-        FillCartesianWaypoint(0.200, 0.150, 0.400, 90.6, -1.0, 150, 0));
-    service_execute_waypoints_trajectory.request.input.waypoints.push_back(
-        FillCartesianWaypoint(0.350, 0.050, 0.300, 90.6, -1.0, 150, 0));
+        FillCartesianWaypoint(src_x, src_y, src_z, src_theta_x, src_y,
+                              src_theta_z, 0));
   } else {
-    service_execute_waypoints_trajectory.request.input.waypoints.push_back(
-        FillCartesianWaypoint(0.7, 0.0, 0.5, 90, 0, 90, 0));
-    service_execute_waypoints_trajectory.request.input.waypoints.push_back(
-        FillCartesianWaypoint(0.7, 0.0, 0.33, 90, 0, 90, 0.1));
-    service_execute_waypoints_trajectory.request.input.waypoints.push_back(
-        FillCartesianWaypoint(0.7, 0.48, 0.33, 90, 0, 90, 0.1));
-    service_execute_waypoints_trajectory.request.input.waypoints.push_back(
-        FillCartesianWaypoint(0.61, 0.22, 0.4, 90, 0, 90, 0.1));
-    service_execute_waypoints_trajectory.request.input.waypoints.push_back(
-        FillCartesianWaypoint(0.7, 0.48, 0.33, 90, 0, 90, 0.1));
-    service_execute_waypoints_trajectory.request.input.waypoints.push_back(
-        FillCartesianWaypoint(0.63, -0.22, 0.45, 90, 0, 90, 0.1));
-    service_execute_waypoints_trajectory.request.input.waypoints.push_back(
-        FillCartesianWaypoint(0.65, 0.05, 0.45, 90, 0, 90, 0));
+    ROS_INFO("only support gen3-lite");
+    return false;
   }
+
+  // open the gripper
+  example_send_gripper_command(n, robot_name, 0.8);
 
   service_execute_waypoints_trajectory.request.input.duration = 0;
   service_execute_waypoints_trajectory.request.input.use_optimal_blending = 0;
 
+  // Send the waypoints
   if (service_client_execute_waypoints_trajectory.call(
           service_execute_waypoints_trajectory)) {
     ROS_INFO("The WaypointList command was sent to the robot.");
@@ -383,6 +389,24 @@ bool example_cartesian_waypoint(ros::NodeHandle n,
     ROS_ERROR("%s", error_string.c_str());
     return false;
   }
+
+  // close the gripper
+  example_send_gripper_command(n, robot_name, 0.17);
+
+  service_execute_waypoints_trajectory.request.input.waypoints.push_back(
+      FillCartesianWaypoint(goal_x, goal_y, goal_z, goal_theta_x, goal_theta_y,
+                            goal_theta_z, 0));
+  if (service_client_execute_waypoints_trajectory.call(
+          service_execute_waypoints_trajectory)) {
+    ROS_INFO("The WaypointList command was sent to the robot.");
+  } else {
+    std::string error_string = "Failed to call ExecuteWaypointTrajectory";
+    ROS_ERROR("%s", error_string.c_str());
+    return false;
+  }
+
+  // open the gripper
+    example_send_gripper_command(n, robot_name, 0.8);
 
   return wait_for_action_end_or_abort();
 }
@@ -404,6 +428,9 @@ int main(int argc, char **argv) {
   int degrees_of_freedom = 6;
 
   bool is_gripper_present = true;
+
+  std::vector<float> src_pose = {0.5, 0.0, 0.5, 0.0, 0.0, 0.0};
+  std::vector<float> goal_pose = {0.5, 0.0, 0.3, 0.0, 0.0, 0.0};
 
   // Parameter robot_name
   if (!ros::param::get("~robot_name", robot_name)) {
@@ -479,14 +506,8 @@ int main(int argc, char **argv) {
   success &= example_set_cartesian_reference_frame(n, robot_name);
 
   //*******************************************************************************
-  // Example of angular position
-  // Let's send the arm to vertical position
-  success &= example_send_joint_angles(n, robot_name, degrees_of_freedom);
-
-  //*******************************************************************************
   // Move the robot using Cartesian waypoint.
-  success &= example_cartesian_waypoint(n, robot_name);
-  //*******************************************************************************
+  success &= grasp_and_grip(n, robot_name, src_pose, goal_pose);
 
   //*******************************************************************************
   // Move the robot to the Home position one last time.
