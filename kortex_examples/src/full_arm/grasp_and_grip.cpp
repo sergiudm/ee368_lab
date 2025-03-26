@@ -230,7 +230,7 @@ bool example_send_gripper_command(ros::NodeHandle n,
     ROS_ERROR("%s", error_string.c_str());
     return false;
   }
-  std::this_thread::sleep_for(std::chrono::milliseconds(500));
+  std::this_thread::sleep_for(std::chrono::milliseconds(1500));
   return true;
 }
 
@@ -391,18 +391,18 @@ int main(int argc, char **argv) {
   // Set the reference frame to "Mixed"
   success &= example_set_cartesian_reference_frame(n, robot_name);
 
-  success &= example_send_gripper_command(n, robot_name, 0.8);
+  success &= example_send_gripper_command(n, robot_name, 0.1);
   ROS_INFO("open the gripper");
 
   //*******************************************************************************
   success &= move_to_pose(n, robot_name, pose1);
 
-  success &= example_send_gripper_command(n, robot_name, 0.2);
+  success &= example_send_gripper_command(n, robot_name, 0.8);
   ROS_INFO("close the gripper");
 
   success &= move_to_pose(n, robot_name, pose2);
 
-  success &= example_send_gripper_command(n, robot_name, 0.8);
+  success &= example_send_gripper_command(n, robot_name, 0.1);
   ROS_INFO("open the gripper");
 
   //*******************************************************************************
