@@ -159,54 +159,6 @@ bool example_set_cartesian_reference_frame(ros::NodeHandle n,
   return true;
 }
 
-bool example_send_cartesian_pose(ros::NodeHandle n,
-                                 const std::string &robot_name) {
-  last_action_notification_event = 0;
-  // Get the actual cartesian pose to increment it
-  // You can create a subscriber to listen to the base_feedback
-  // Here we only need the latest message in the topic though
-  auto feedback =
-      ros::topic::waitForMessage<kortex_driver::BaseCyclic_Feedback>(
-          "/" + robot_name + "/base_feedback");
-
-  // Initialize the ServiceClient
-  ros::ServiceClient service_client_execute_waypoints_trajectory =
-      n.serviceClient<kortex_driver::ExecuteWaypointTrajectory>(
-          "/" + robot_name + "/base/execute_waypoint_trajectory");
-  kortex_driver::ExecuteWaypointTrajectory service_execute_waypoints_trajectory;
-
-  kortex_driver::Waypoint waypoint;
-
-  // Initialize input
-  float current_x = feedback->base.commanded_tool_pose_x;
-  float current_y = feedback->base.commanded_tool_pose_y;
-  float current_z = feedback->base.commanded_tool_pose_z;
-  float current_theta_x = feedback->base.commanded_tool_pose_theta_x;
-  float current_theta_y = feedback->base.commanded_tool_pose_theta_y;
-  float current_theta_z = feedback->base.commanded_tool_pose_theta_z;
-
-  // Creating the target pose
-  service_execute_waypoints_trajectory.request.input.waypoints.push_back(
-      FillCartesianWaypoint(current_x, current_y, current_z + 0.10,
-                            current_theta_x, current_theta_y, current_theta_z,
-                            0));
-
-  service_execute_waypoints_trajectory.request.input.duration = 0;
-  service_execute_waypoints_trajectory.request.input.use_optimal_blending =
-      false;
-
-  if (service_client_execute_waypoints_trajectory.call(
-          service_execute_waypoints_trajectory)) {
-    ROS_INFO("The new cartesian pose was sent to the robot.");
-  } else {
-    std::string error_string = "Failed to call ExecuteWaypointTrajectory";
-    ROS_ERROR("%s", error_string.c_str());
-    return false;
-  }
-
-  return wait_for_action_end_or_abort();
-}
-
 bool example_send_gripper_command(ros::NodeHandle n,
                                   const std::string &robot_name, double value) {
   // Initialize the ServiceClient
